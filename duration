@@ -1,0 +1,108 @@
+function duration() {
+
+    function isIllegalDateDiffOperation(a, b) {
+        return a < b;
+  }
+
+    function map(ts) {
+
+        var date = normalizeDate(ts);
+
+        return {
+            year: date.getFullYear(),
+            month: date.getMonth(),
+            day: date.getDate(),
+            date: date,
+            ts: date.getTime()
+        };
+    }
+
+    function diff(a, b) {
+        return {
+            years: a.year - b.year,
+            months: a.month - b.month,
+            days: a.day - b.day,
+            ts: a.ts - b.ts,
+            a: a,
+            b: b
+        };
+    }
+
+    function daysInMonth(ts) {
+
+        var date = new Date(ts);
+
+        date.setMonth(date.getMonth() + 1);
+        date.setDate(0);
+
+        return date.getDate();
+    }
+
+    function normalizeDate(ts) {
+
+        var PRESET = { today: new Date() };
+
+        return PRESET[ts] || new Date(ts);
+    }
+
+    function normalizeMonth(diff) {
+        if (diff.months < 0) {
+            diff.months += 12;
+            diff.years -= 1;
+        }
+    }
+
+    function normalizeDays(diff) {
+        if (diff.days < 0) {
+            diff.days = daysInMonth(diff.b.ts) - diff.b.day + diff.a.day;
+            diff.months -= 1;
+        }
+    }
+
+    function normalize(diff) {
+        normalizeMonth(diff);
+        normalizeDays(diff);
+        return diff;
+    }
+
+    function datediff(a, b) {
+
+        if (isIllegalDateDiffOperation(a, b)) {
+            throw new Error('duration: Invalid timespan');
+        }
+
+        return normalize(diff(map(a), map(b)));
+    }
+
+    function humanize(format, diff) {
+
+        function pluralize(quantity, singular, plural, masking) {
+
+            switch (quantity) {
+                case 0:
+                    return format.replace(masking, '');
+
+                case 1:
+                    return format.replace(plural, singular);
+
+                default:
+                    return format;
+            }
+        }
+
+        function delimiter(raw) {
+            return raw.replace(/(y\s*\[\w+\])\s*(M\s*\[\w+\])\s*(D\s*\[\w+\])/, '$1, $2 $3')
+                .replace(/([yM]\s*\[\w+\])\s*([MD]\s*\[\w+\])/, '$1 e $2')
+                .replace(/y\s*\[([^\]]+)\](.*)/, diff.years + ' $1$2')
+                .replace(/M\s*\[([^\]]+)\](.*)/, diff.months + ' $1$2')
+                .replace(/D\s*\[([^\]]+)\](.*)/, diff.days + ' $1')
+                .replace(/^\s+|\s+$/g, '')
+                .replace(/\s+/, ' ');
+        }
+
+        format = pluralize(diff.years, 'ano', 'anos', 'y [anos]');
+        format = pluralize(diff.months, 'mês', 'meses', 'M [meses]');
+        format = pluralize(diff.days, 'dia', 'dias', 'D [dias]');
+
+        return delimiter(format);
+    }
